@@ -47,12 +47,12 @@ GeneticAlgorithm.prototype = {
 	
 	// activates the neural network of an unit from the population 
 	// to calculate an output action according to the inputs
-	activateBrain : function(bird, target){		
+	activateBrain : function(bird){		
 		// input 1: the horizontal distance between the bird and the target
-		var targetDeltaX = this.normalize(target.x, 700) * this.SCALE_FACTOR;
+		var targetDeltaX = this.normalize(bird.targetBarrier.getGapX(), 700) * this.SCALE_FACTOR;
 		
 		// input 2: the height difference between the bird and the target
-		var targetDeltaY = this.normalize(bird.y - target.y, 800) * this.SCALE_FACTOR;
+		var targetDeltaY = this.normalize(bird.y - bird.targetBarrier.getGapY(), 800) * this.SCALE_FACTOR;
 	
 		// create an array of all inputs
 		var inputs = [targetDeltaX, targetDeltaY];

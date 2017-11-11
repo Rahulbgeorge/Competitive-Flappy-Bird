@@ -58,6 +58,9 @@ App.Main.prototype = {
 
 		// set the gravity of the world
 		this.game.physics.arcade.gravity.y = 1300;
+
+		// Speed the game up
+    this.game.time.slowMotion = 0.5;
 		
 		// create a new Genetic Algorithm with a population of 10 units which will be evolving by using 4 top units
 		this.GA = new GeneticAlgorithm(10, 4);
@@ -160,12 +163,12 @@ App.Main.prototype = {
 				// define pointer to the last barrier
 				this.lastBarrier = this.BarrierGroup.getAt(this.BarrierGroup.length-1);
 				
-				// define pointer to the current target barrier
-				this.targetBarrier = this.firstBarrier;
-				
 				// start a new population of birds
+				first = true;
 				this.BirdGroup.forEach(function(bird){
 					bird.restart(this.GA.iteration);
+					// Initialize bird specific targets
+					bird.targetBarrier = this.firstBarrier;
 					
 					if (this.GA.Population[bird.index].isWinner){
 						this.txtStatusPrevGreen[bird.index].text = bird.fitness_prev.toFixed(2)+"\n" + bird.score_prev;
@@ -174,43 +177,40 @@ App.Main.prototype = {
 						this.txtStatusPrevGreen[bird.index].text = "";
 						this.txtStatusPrevRed[bird.index].text = bird.fitness_prev.toFixed(2)+"\n" + bird.score_prev;
 					}
+					if (first) {
+						bird.x += 50;
+						first = false;
+					}
 				}, this);
 							
 				this.state = this.STATE_PLAY;
 				break;
 				
 			case this.STATE_PLAY: // play Flappy Bird game by using genetic algorithm AI
-				// update position of the target point
-				this.TargetPoint.x = this.targetBarrier.getGapX();
-				this.TargetPoint.y = this.targetBarrier.getGapY();
-				
-				var isNextTarget = false; // flag to know if we need to set the next target barrier
-				
 				this.BirdGroup.forEachAlive(function(bird){
 					// calculate the current fitness and the score for this bird
-					bird.fitness_curr = this.distance - this.game.physics.arcade.distanceBetween(bird, this.TargetPoint);
-					bird.score_curr = this.score;
+					bird.fitness += Math.abs(bird.targetBarrier.topTree.deltaX);
 					
 					// check collision between a bird and the target barrier
-					this.game.physics.arcade.collide(bird, this.targetBarrier, this.onDeath, null, this);
+					this.game.physics.arcade.collide(bird, bird.targetBarrier, this.onDeath, null, this);
 					
-					if (bird.alive){
-						// check if a bird passed through the gap of the target barrier
-						if (bird.x > this.TargetPoint.x) isNextTarget = true;
+					if (bird.alive) {
+						// check if the bird passed through the gap of the target barrier
+						if (bird.x > bird.targetBarrier.getGapX()) {
+							bird.score++;
+							bird.targetBarrier = this.getNextBarrier(bird.targetBarrier.index);
+						}
 						
 						// check if a bird flies out of vertical bounds
 						if (bird.y<0 || bird.y>610) this.onDeath(bird);
+
+						// If the bird has made it far enough, kill it
+						if (bird.score >= 50) this.onDeath(bird);
 						
 						// perform a proper action (flap yes/no) for this bird by activating its neural network
-						this.GA.activateBrain(bird, this.TargetPoint);
+						this.GA.activateBrain(bird);
 					}
 				}, this);
-				
-				// if any bird passed through the current target barrier then set the next target barrier
-				if (isNextTarget){
-					this.score++;
-					this.targetBarrier = this.getNextBarrier(this.targetBarrier.index);
-				}
 				
 				// if the first barrier went out of the left bound then restart it on the right side
 				if (this.firstBarrier.getWorldX() < -this.firstBarrier.width){
@@ -219,10 +219,7 @@ App.Main.prototype = {
 					this.firstBarrier = this.getNextBarrier(this.firstBarrier.index);
 					this.lastBarrier = this.getNextBarrier(this.lastBarrier.index);
 				}
-				
-				// increase the travelled distance
-				this.distance += Math.abs(this.firstBarrier.topTree.deltaX);
-				
+
 				this.drawStatus();				
 				break;
 				
@@ -257,7 +254,7 @@ App.Main.prototype = {
 			}
 			
 			// draw bird's fitness and score
-			this.txtStatusCurr[bird.index].setText(bird.fitness_curr.toFixed(2)+"\n" + bird.score_curr);
+			this.txtStatusCurr[bird.index].setText(bird.fitness.toFixed(2)+"\n" + bird.score);
 		}, this);
 	},
 	
@@ -266,8 +263,8 @@ App.Main.prototype = {
 	},
 	
 	onDeath : function(bird){
-		this.GA.Population[bird.index].fitness = bird.fitness_curr;
-		this.GA.Population[bird.index].score = bird.score_curr;
+		this.GA.Population[bird.index].fitness = bird.fitness;
+		this.GA.Population[bird.index].score = bird.score;
 					
 		bird.death();
 		if (this.BirdGroup.countLiving() == 0) this.state = this.STATE_GAMEOVER;
@@ -376,11 +373,16 @@ Bird.prototype = Object.create(Phaser.Sprite.prototype);
 Bird.prototype.constructor = Bird;
 
 Bird.prototype.restart = function(iteration){
-	this.fitness_prev = (iteration == 1) ? 0 : this.fitness_curr;
-	this.fitness_curr = 0;
-	
-	this.score_prev = (iteration == 1) ? 0: this.score_curr;
-	this.score_curr = 0;
+	if (iteration == 1) {
+		this.fitness_prev = 0;
+		this.score_prev = 0;
+	} else {
+		this.fitness_prev = this.fitness;
+		this.score_prev = this.score;
+	}
+
+	this.fitness = 0;
+	this.score = 0;
 	
 	this.alpha = 1;
 	this.reset(150, 300 + this.index * 20);
