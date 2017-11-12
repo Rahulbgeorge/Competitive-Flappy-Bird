@@ -148,10 +148,6 @@ App.Main.prototype = {
 					"The best unit was born in generation "+(this.GA.best_population)+":"+
 					"\nFitness = "+this.GA.best_fitness.toFixed(2)+" / Score = " + this.GA.best_score;
 				
-				// reset score and distance
-				this.score = 0;
-				this.distance = 0;
-				
 				// reset barriers
 				this.BarrierGroup.forEach(function(barrier){
 					barrier.restart(700 + barrier.index * this.BARRIER_DISTANCE);
@@ -363,7 +359,6 @@ var Bird = function(game, x, y, index) {
 	// add flap animation and start to play it
 	var i=index*2;
 	this.animations.add('flap', [i, i+1]);
-	this.animations.play('flap', 8, true);
 
 	// enable physics on the bird
 	this.game.physics.arcade.enableBody(this);
@@ -390,6 +385,7 @@ Bird.prototype.restart = function(iteration){
 
 Bird.prototype.flap = function(){
 	this.body.velocity.y = -400;
+	this.animations.play('flap', 8, false);
 };
 
 Bird.prototype.death = function(){

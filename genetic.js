@@ -76,7 +76,7 @@ GeneticAlgorithm.prototype = {
 			// Playing as the God, we can destroy this bad population and try with another one.
 			this.createPopulation();
 		} else {
-			this.mutateRate = 0.2; // else set the mutatation rate to the real value
+			this.mutateRate = 0.05; // else set the mutatation rate to the real value
 		}
 			
 		// fill the rest of the next population with new units using crossover and mutation
