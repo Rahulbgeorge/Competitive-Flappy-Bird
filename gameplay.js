@@ -30,6 +30,7 @@ App.Main.prototype = {
 		this.game.load.spritesheet('imgTree', 'assets/img_tree.png', 90, 400, 2);
 		this.game.load.spritesheet('imgButtons', 'assets/img_buttons.png', 110, 40, 3);
 		
+		this.game.load.image('imgCoin', 'assets/img_coin.png');
 		this.game.load.image('imgTarget', 'assets/img_target.png');
 		this.game.load.image('imgGround', 'assets/img_ground.png');
 		this.game.load.image('imgPause', 'assets/img_pause.png');
@@ -78,6 +79,12 @@ App.Main.prototype = {
 			new TreeGroup(this.game, this.BarrierGroup, i);
 		}
 		
+		//create a CoinGroup that contains a number of Coins to be placed in between Tree Groups
+		this.CoinGroup = this.game.add.group();
+		for (var i = 0; i < 5; i++) {
+			this.CoinGroup.add(new Coin(this.game,  10*i, 10, i));
+		}
+
 		// create a Target Point sprite
 		this.TargetPoint = this.game.add.sprite(0, 0, 'imgTarget');
 		this.TargetPoint.anchor.setTo(0.5);
@@ -159,6 +166,12 @@ App.Main.prototype = {
 				// define pointer to the last barrier
 				this.lastBarrier = this.BarrierGroup.getAt(this.BarrierGroup.length-1);
 				
+				//distribute coins throughout the map, WIP
+				for(var i=0; i< this.CoinGroup.size; i++) {
+					this.CoinGroup.getAt(i).y = integerInRange(0,610);
+					this.CoinGroup.getAt(i).x = this.BarrierGroup.getAt(i).getGapX() - 20;  
+				}
+
 				// start a new population of birds
 				first = true;
 				this.BirdGroup.forEach(function(bird){
@@ -287,6 +300,30 @@ App.Main.prototype = {
 			this.sprPause.kill();
 		}
     }
+
+    onCoinPickup : function(bird, birdGroup){
+    	this.birdGroup.ForEachAlive(function(bird){
+    		// check collision between a bird and the target Coin
+			this.game.physics.arcade.collide(bird, bird.targetCoin, this.onDeath, null, this);
+					
+			if (bird.alive) {
+				// check if the bird picked up a coin
+				if (bird.x > bird.targetCoin.getGapX()) {
+					bird.score++;
+					bird.targetBarrier = this.getNextBarrier(bird.targetBarrier.index);
+				}
+						
+				// check if a bird flies out of vertical bounds
+				if (bird.y<0 || bird.y>610) this.onDeath(bird);
+
+				// If the bird has made it far enough, kill it
+				if (bird.score >= 50) this.onDeath(bird);
+						
+				// perform a proper action (flap yes/no) for this bird by activating its neural network
+				this.GA.activateBrain(bird);
+			}
+    	}, this);
+    }
 }
 
 /***********************************************************************************
@@ -389,6 +426,22 @@ Bird.prototype.flap = function(){
 };
 
 Bird.prototype.death = function(){
+	this.alpha = 0.5;
+	this.kill();
+};
+
+/***********************************************************************************
+/* Coin Class extends Phaser.Sprite
+/***********************************************************************************/
+
+var Coin = function(game, x, y, index) {
+	Phaser.Sprite.call(this, game, x, y, 'imgCoin');
+	this.index = index;
+};
+
+Coin.prototype = Object.create(Phaser.Sprite.prototype);
+Coin.prototype.constructor = Coin;
+Coin.prototype.death = function(){
 	this.alpha = 0.5;
 	this.kill();
 };
