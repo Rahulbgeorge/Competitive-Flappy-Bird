@@ -60,7 +60,7 @@ App.Main.prototype = {
 		// set the gravity of the world
 		this.game.physics.arcade.gravity.y = 1300;
 
-		// Speed the game up
+		// Speed the game up.1
     	this.game.time.slowMotion = 0.5;
 		
 		// create a new Genetic Algorithm with a population of 10 units which will be evolving by using 4 top units
@@ -186,7 +186,7 @@ App.Main.prototype = {
 			case this.STATE_PLAY: // play Flappy Bird game by using genetic algorithm AI
 				this.BirdGroup.forEachAlive(function(bird){
 					// calculate the current fitness and the score for this bird
-					bird.fitness += Math.abs(bird.targetBarrier.topTree.deltaX);
+					bird.fitness += Math.abs(bird.targetBarrier.topTree.deltaX)/this.BARRIER_DISTANCE;
 					
 					// check collision between a bird and the target barrier
 					this.game.physics.arcade.collide(bird,
@@ -291,15 +291,6 @@ App.Main.prototype = {
 			this.btnPause.input.enabled = true;
 			this.sprPause.kill();
 		}
-    },
-
-    checkCoinPickup : function(bird){
-		// check collision between a bird and the target coin
-		var targetCoin = bird.getTargetCoin();
-		if (this.game.physics.arcade.collide(bird, targetCoin, null, null, this)) {
-			// For now just increment the bird's score
-			bird.score++;
-		}
     }
 }
 
@@ -354,7 +345,7 @@ TreeGroup.prototype.checkCollide = function(bird) {
     if (bird.x < this.topTree.world.x + this.coinOffset + 50) {
         if (!this.coin.gotten) {
             this.coin.onGet();
-            bird.score++;
+            bird.fitness++;
         }
         return false;
     } 
