@@ -21,7 +21,7 @@ App.Main = function(game){
 	this.STATE_PLAY = 3;
 	this.STATE_GAMEOVER = 4;
 	
-	this.BARRIER_DISTANCE = 300;
+	this.BARRIER_DISTANCE = 500;
 }
 
 App.Main.prototype = {
@@ -30,11 +30,11 @@ App.Main.prototype = {
 		this.game.load.spritesheet('imgTree', 'assets/img_tree.png', 90, 400, 2);
 		this.game.load.spritesheet('imgButtons', 'assets/img_buttons.png', 110, 40, 3);
 		
-		this.game.load.image('imgCoin', 'assets/img_coin.png');
 		this.game.load.image('imgTarget', 'assets/img_target.png');
 		this.game.load.image('imgGround', 'assets/img_ground.png');
 		this.game.load.image('imgPause', 'assets/img_pause.png');
 		this.game.load.image('imgLogo', 'assets/img_logo.png');
+        this.game.load.image('imgCoin', 'assets/img_coin.png');
 		
 		this.load.bitmapFont('fnt_chars_black', 'assets/fnt_chars_black.png', 'assets/fnt_chars_black.fnt');
 		this.load.bitmapFont('fnt_digits_blue', 'assets/fnt_digits_blue.png', 'assets/fnt_digits_blue.fnt');
@@ -61,7 +61,7 @@ App.Main.prototype = {
 		this.game.physics.arcade.gravity.y = 1300;
 
 		// Speed the game up
-    this.game.time.slowMotion = 0.5;
+    	this.game.time.slowMotion = 0.5;
 		
 		// create a new Genetic Algorithm with a population of 10 units which will be evolving by using 4 top units
 		this.GA = new GeneticAlgorithm(10, 4);
@@ -79,12 +79,6 @@ App.Main.prototype = {
 			new TreeGroup(this.game, this.BarrierGroup, i);
 		}
 		
-		//create a CoinGroup that contains a number of Coins to be placed in between Tree Groups
-		this.CoinGroup = this.game.add.group();
-		for (var i = 0; i < 5; i++) {
-			this.CoinGroup.add(new Coin(this.game,  10*i, 10, i));
-		}
-
 		// create a Target Point sprite
 		this.TargetPoint = this.game.add.sprite(0, 0, 'imgTarget');
 		this.TargetPoint.anchor.setTo(0.5);
@@ -166,12 +160,6 @@ App.Main.prototype = {
 				// define pointer to the last barrier
 				this.lastBarrier = this.BarrierGroup.getAt(this.BarrierGroup.length-1);
 				
-				//distribute coins throughout the map, WIP
-				for(var i=0; i< this.CoinGroup.size; i++) {
-					this.CoinGroup.getAt(i).y = integerInRange(0,610);
-					this.CoinGroup.getAt(i).x = this.BarrierGroup.getAt(i).getGapX() - 20;  
-				}
-
 				// start a new population of birds
 				first = true;
 				this.BirdGroup.forEach(function(bird){
@@ -201,13 +189,17 @@ App.Main.prototype = {
 					bird.fitness += Math.abs(bird.targetBarrier.topTree.deltaX);
 					
 					// check collision between a bird and the target barrier
-					this.game.physics.arcade.collide(bird, bird.targetBarrier, this.onDeath, null, this);
+					this.game.physics.arcade.collide(bird,
+                                                     bird.targetBarrier,
+                                                     this.onDeath,
+                                                     bird.targetBarrier.checkCollide.bind(bird.targetBarrier),
+                                                     this);
 					
 					if (bird.alive) {
 						// check if the bird passed through the gap of the target barrier
 						if (bird.x > bird.targetBarrier.getGapX()) {
 							bird.score++;
-							bird.targetBarrier = this.getNextBarrier(bird.targetBarrier.index);
+							bird.targetBarrier = this.getBarrier(bird.targetBarrier.index + 1);
 						}
 						
 						// check if a bird flies out of vertical bounds
@@ -225,8 +217,8 @@ App.Main.prototype = {
 				if (this.firstBarrier.getWorldX() < -this.firstBarrier.width){
 					this.firstBarrier.restart(this.lastBarrier.getWorldX() + this.BARRIER_DISTANCE);
 					
-					this.firstBarrier = this.getNextBarrier(this.firstBarrier.index);
-					this.lastBarrier = this.getNextBarrier(this.lastBarrier.index);
+					this.firstBarrier = this.getBarrier(this.firstBarrier.index + 1);
+					this.lastBarrier = this.getBarrier(this.lastBarrier.index + 1);
 				}
 
 				this.drawStatus();				
@@ -267,8 +259,8 @@ App.Main.prototype = {
 		}, this);
 	},
 	
-	getNextBarrier : function(index){
-		return this.BarrierGroup.getAt((index + 1) % this.BarrierGroup.length);
+	getBarrier : function(index){
+		return this.BarrierGroup.getAt(index % this.BarrierGroup.length);
 	},
 	
 	onDeath : function(bird){
@@ -299,30 +291,15 @@ App.Main.prototype = {
 			this.btnPause.input.enabled = true;
 			this.sprPause.kill();
 		}
-    }
+    },
 
-    onCoinPickup : function(bird, birdGroup){
-    	this.birdGroup.ForEachAlive(function(bird){
-    		// check collision between a bird and the target Coin
-			this.game.physics.arcade.collide(bird, bird.targetCoin, this.onDeath, null, this);
-					
-			if (bird.alive) {
-				// check if the bird picked up a coin
-				if (bird.x > bird.targetCoin.getGapX()) {
-					bird.score++;
-					bird.targetBarrier = this.getNextBarrier(bird.targetBarrier.index);
-				}
-						
-				// check if a bird flies out of vertical bounds
-				if (bird.y<0 || bird.y>610) this.onDeath(bird);
-
-				// If the bird has made it far enough, kill it
-				if (bird.score >= 50) this.onDeath(bird);
-						
-				// perform a proper action (flap yes/no) for this bird by activating its neural network
-				this.GA.activateBrain(bird);
-			}
-    	}, this);
+    checkCoinPickup : function(bird){
+		// check collision between a bird and the target coin
+		var targetCoin = bird.getTargetCoin();
+		if (this.game.physics.arcade.collide(bird, targetCoin, null, null, this)) {
+			// For now just increment the bird's score
+			bird.score++;
+		}
     }
 }
 
@@ -334,12 +311,15 @@ var TreeGroup = function(game, parent, index){
 	Phaser.Group.call(this, game, parent);
 
 	this.index = index;
+    this.coinOffset = -225;
 
 	this.topTree = new Tree(this.game, 0); // create a top Tree object
 	this.bottomTree = new Tree(this.game, 1); // create a bottom Tree object
+    this.coin = new Coin(this.game, this.coinOffset, 3); // a tree group includes a coin behind it
 	
 	this.add(this.topTree); // add the top Tree to this group
 	this.add(this.bottomTree); // add the bottom Tree to this group
+    this.add(this.coin); // add the coin to the group
 };
 
 TreeGroup.prototype = Object.create(Phaser.Group.prototype);
@@ -348,6 +328,8 @@ TreeGroup.prototype.constructor = TreeGroup;
 TreeGroup.prototype.restart = function(x) {
 	this.topTree.reset(0, 0);
 	this.bottomTree.reset(0, this.topTree.height + 130);
+    this.coin.reset(this.coinOffset, this.game.rnd.integerInRange(250, 650));
+    this.coin.resetCustom();
 
 	this.x = x;
 	this.y = this.game.rnd.integerInRange(110-this.topTree.height, -20);
@@ -367,6 +349,18 @@ TreeGroup.prototype.getGapY = function() {
 	return this.bottomTree.world.y - 65;
 };
 
+TreeGroup.prototype.checkCollide = function(bird) {
+    // Check if the bird hit the coin
+    if (bird.x < this.topTree.world.x + this.coinOffset + 50) {
+        if (!this.coin.gotten) {
+            this.coin.onGet();
+            bird.score++;
+        }
+        return false;
+    } 
+    return true;
+};
+
 /***********************************************************************************
 /* Tree Class extends Phaser.Sprite
 /***********************************************************************************/
@@ -382,6 +376,35 @@ var Tree = function(game, frame) {
 
 Tree.prototype = Object.create(Phaser.Sprite.prototype);
 Tree.prototype.constructor = Tree;
+
+/***********************************************************************************
+ +/* Coin Class extends Phaser.Sprite
+ +/***********************************************************************************/
+ 
+ var Coin = function(game, coinOffset, frame) {
+    Phaser.Sprite.call(this, game, coinOffset, game.rnd.integerInRange(250, 650), 'imgCoin', frame);
+    
+    this.game.physics.arcade.enableBody(this);
+    
+    this.body.allowGravity = false;
+    this.body.immovable = true;
+
+    this.gotten = false;
+};
+
+ Coin.prototype = Object.create(Phaser.Sprite.prototype);
+ Coin.prototype.constructor = Coin;
+
+ Coin.prototype.onGet = function(){
+    this.gotten = true;
+    this.alpha = 0.1;
+    console.log("bird got a coin!");
+ }
+
+  Coin.prototype.resetCustom = function(){
+    this.gotten = false;
+    this.alpha = 1.0;
+ }
 
 /***********************************************************************************
 /* Bird Class extends Phaser.Sprite
@@ -431,22 +454,6 @@ Bird.prototype.death = function(){
 };
 
 /***********************************************************************************
-/* Coin Class extends Phaser.Sprite
-/***********************************************************************************/
-
-var Coin = function(game, x, y, index) {
-	Phaser.Sprite.call(this, game, x, y, 'imgCoin');
-	this.index = index;
-};
-
-Coin.prototype = Object.create(Phaser.Sprite.prototype);
-Coin.prototype.constructor = Coin;
-Coin.prototype.death = function(){
-	this.alpha = 0.5;
-	this.kill();
-};
-
-/***********************************************************************************
 /* Text Class extends Phaser.BitmapText
 /***********************************************************************************/
 
@@ -463,4 +470,3 @@ var Text = function(game, x, y, text, align, font){
 
 Text.prototype = Object.create(Phaser.BitmapText.prototype);
 Text.prototype.constructor = Text;
-
