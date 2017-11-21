@@ -32,7 +32,7 @@ GeneticAlgorithm.prototype = {
 		for (var i=0; i<this.max_units; i++){
 			// create a new unit by generating a random Synaptic neural network
 			// with 2 neurons in the input layer, 6 neurons in the hidden layer and 1 neuron in the output layer
-			var newUnit = new synaptic.Architect.Perceptron(2, 6, 1);
+			var newUnit = new synaptic.Architect.Perceptron(4, 12, 1);
 			
 			// set additional parameters for the new unit
 			newUnit.index = i;
@@ -49,13 +49,19 @@ GeneticAlgorithm.prototype = {
 	// to calculate an output action according to the inputs
 	activateBrain : function(bird){		
 		// input 1: the horizontal distance between the bird and the target
-		var targetDeltaX = this.normalize(bird.targetBarrier.getGapX(), 700) * this.SCALE_FACTOR;
+		var targetBarrierDeltaX = this.normalize(bird.targetBarrier.getGapX() - bird.x, 700) * this.SCALE_FACTOR;
 		
 		// input 2: the height difference between the bird and the target
-		var targetDeltaY = this.normalize(bird.y - bird.targetBarrier.getGapY(), 800) * this.SCALE_FACTOR;
+		var targetBarrierDeltaY = this.normalize(bird.y - bird.targetBarrier.getGapY(), 800) * this.SCALE_FACTOR;
+		
+		// input 3: the horizontal distance between the bird and the coin
+		var targetCoinDeltaX = this.normalize(bird.targetBarrier.coin.x, - bird.x, 700) * this.SCALE_FACTOR;
+		
+		// input 4: the height difference between the bird and the coin
+		var targetCoinDeltaY = this.normalize(bird.y - bird.targetBarrier.coin.y, 800) * this.SCALE_FACTOR;
 	
 		// create an array of all inputs
-		var inputs = [targetDeltaX, targetDeltaY];
+		var inputs = [targetBarrierDeltaX, targetBarrierDeltaY, targetCoinX, targetCoinY];
 		
 		// calculate outputs by activating synaptic neural network of this bird
 		var outputs = this.Population[bird.index].activate(inputs);

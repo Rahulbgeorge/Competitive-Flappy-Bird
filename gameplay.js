@@ -349,6 +349,8 @@ TreeGroup.prototype.getGapY = function() {
 	return this.bottomTree.world.y - 65;
 };
 
+TreeG
+
 TreeGroup.prototype.checkCollide = function(bird) {
     // Check if the bird hit the coin
     if (bird.x < this.topTree.world.x + this.coinOffset + 50) {
