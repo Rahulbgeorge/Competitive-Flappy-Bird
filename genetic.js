@@ -61,7 +61,7 @@ GeneticAlgorithm.prototype = {
 		var targetCoinDeltaY = this.normalize(bird.y - bird.targetBarrier.coin.y, 800) * this.SCALE_FACTOR;
 	
 		// create an array of all inputs
-		var inputs = [targetBarrierDeltaX, targetBarrierDeltaY, targetCoinX, targetCoinY];
+		var inputs = [targetBarrierDeltaX, targetBarrierDeltaY, targetCoinDeltaX, targetCoinDeltaY];
 		
 		// calculate outputs by activating synaptic neural network of this bird
 		var outputs = this.Population[bird.index].activate(inputs);

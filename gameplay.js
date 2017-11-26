@@ -175,7 +175,7 @@ App.Main.prototype = {
 						this.txtStatusPrevRed[bird.index].text = bird.fitness_prev.toFixed(2)+"\n" + bird.score_prev;
 					}
 					if (first) {
-						bird.x += 50;
+						bird.x += 0;
 						first = false;
 					}
 				}, this);
@@ -339,8 +339,6 @@ TreeGroup.prototype.getGapX = function() {
 TreeGroup.prototype.getGapY = function() {
 	return this.bottomTree.world.y - 65;
 };
-
-TreeG
 
 TreeGroup.prototype.checkCollide = function(bird) {
     // Check if the bird hit the coin
