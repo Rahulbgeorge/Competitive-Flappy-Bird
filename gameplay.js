@@ -61,7 +61,7 @@ App.Main.prototype = {
 		this.game.physics.arcade.gravity.y = 1300;
 
 		// Speed the game up.1
-    	this.game.time.slowMotion = 0.5;
+    	this.game.time.slowMotion = 0.05;
 		
 		// create a new Genetic Algorithm with a population of 10 units which will be evolving by using 4 top units
 		this.GA = new GeneticAlgorithm(10, 4);
@@ -184,6 +184,7 @@ App.Main.prototype = {
 				break;
 				
 			case this.STATE_PLAY: // play Flappy Bird game by using genetic algorithm AI
+				this.allSurvive = 0;
 				this.BirdGroup.forEachAlive(function(bird){
 					// calculate the current fitness and the score for this bird
 					bird.fitness += Math.abs(bird.targetBarrier.topTree.deltaX)/this.BARRIER_DISTANCE;
@@ -193,8 +194,19 @@ App.Main.prototype = {
                                                      bird.targetBarrier,
                                                      this.onDeath,
                                                      bird.targetBarrier.checkCollide.bind(bird.targetBarrier),
-                                                     this);
-					
+                                                     this);					
+					if(bird.gotCoin){
+						this.BirdGroup.forEachAlive(function(birdShift){
+							if(!birdShift.gotCoin) {
+								birdShift.x = birdShift.x - birdShift.targetBarrier.coinShift;
+							}
+							else{
+								//Optional shift forward for the bird who picked up the coin
+								//birdShift.x = birdShift.x + birdShift.targetBarrier.coinShift;
+								birdShift.gotCoin = false;
+							}
+						});
+					}
 					if (bird.alive) {
 						// check if the bird passed through the gap of the target barrier
 						if (bird.x > bird.targetBarrier.getGapX()) {
@@ -206,7 +218,10 @@ App.Main.prototype = {
 						if (bird.y<0 || bird.y>610) this.onDeath(bird);
 
 						// If the bird has made it far enough, kill it
-						if (bird.score >= 50) this.onDeath(bird);
+						if (bird.score >= 50) {
+							this.allSurvive = this.allSurvive + 1;
+							this.onDeath(bird);
+						}
 						
 						// perform a proper action (flap yes/no) for this bird by activating its neural network
 						this.GA.activateBrain(bird);
@@ -226,8 +241,7 @@ App.Main.prototype = {
 				
 			case this.STATE_GAMEOVER: // when all birds are killed evolve the population
 				this.GA.evolvePopulation();
-				this.GA.iteration++;
-					
+				this.GA.iteration++;	
 				this.state = this.STATE_START;
 				break;
 		}
@@ -319,7 +333,7 @@ TreeGroup.prototype.constructor = TreeGroup;
 TreeGroup.prototype.restart = function(x) {
 	this.topTree.reset(0, 0);
 	this.bottomTree.reset(0, this.topTree.height + 130);
-    this.coin.reset(this.coinOffset, this.game.rnd.integerInRange(250, 650));
+    this.coin.reset(this.coinOffset, this.game.rnd.integerInRange(300, 600));
     this.coin.resetCustom();
 
 	this.x = x;
@@ -342,16 +356,16 @@ TreeGroup.prototype.getGapY = function() {
 
 TreeGroup.prototype.checkCollide = function(bird) {
     // Check if the bird hit the coin
-    if (bird.x < this.topTree.world.x + this.coinOffset + 50) {
-        if (!this.coin.gotten) {
+    if (bird.x < this.topTree.world.x + this.coinOffset + 20) {
+    	if (!this.coin.gotten) {
             this.coin.onGet();
             bird.fitness++;
-        }
-        return false;
-    } 
+       		bird.gotCoin = true;
+    	}
+    	return false;
+    }
     return true;
 };
-
 /***********************************************************************************
 /* Tree Class extends Phaser.Sprite
 /***********************************************************************************/
@@ -381,6 +395,7 @@ Tree.prototype.constructor = Tree;
     this.body.immovable = true;
 
     this.gotten = false;
+    this.coinShift = 10;
 };
 
  Coin.prototype = Object.create(Phaser.Sprite.prototype);
@@ -406,6 +421,7 @@ var Bird = function(game, x, y, index) {
 	   
 	this.index = index;
 	this.anchor.setTo(0.5);
+	this.gotCoin = false;
 	  
 	// add flap animation and start to play it
 	var i=index*2;
