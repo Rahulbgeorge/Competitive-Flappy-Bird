@@ -60,8 +60,8 @@ App.Main.prototype = {
 		// set the gravity of the world
 		this.game.physics.arcade.gravity.y = 1300;
 
-		// Speed the game up.1
-    	this.game.time.slowMotion = 0.05;
+		// Speed the game up x10
+    	this.game.time.slowMotion = 0.1;
 		
 		// create a new Genetic Algorithm with a population of 10 units which will be evolving by using 4 top units
 		this.GA = new GeneticAlgorithm(10, 4);
@@ -71,7 +71,10 @@ App.Main.prototype = {
 		for (var i = 0; i < this.GA.max_units; i++){
 			this.BirdGroup.add(new Bird(this.game, 0, 0, i));
 		}		
-	
+		
+		//create a allSurvive counter that determines when all birds have made it to barrier 50
+		this.allSurvive = 0;
+
 		// create a BarrierGroup which contains a number of Tree Groups
 		// (each Tree Group contains a top and bottom Tree object)
 		this.BarrierGroup = this.game.add.group();		
@@ -161,7 +164,6 @@ App.Main.prototype = {
 				this.lastBarrier = this.BarrierGroup.getAt(this.BarrierGroup.length-1);
 				
 				// start a new population of birds
-				first = true;
 				this.BirdGroup.forEach(function(bird){
 					bird.restart(this.GA.iteration);
 					// Initialize bird specific targets
@@ -174,17 +176,12 @@ App.Main.prototype = {
 						this.txtStatusPrevGreen[bird.index].text = "";
 						this.txtStatusPrevRed[bird.index].text = bird.fitness_prev.toFixed(2)+"\n" + bird.score_prev;
 					}
-					if (first) {
-						bird.x += 0;
-						first = false;
-					}
 				}, this);
 							
 				this.state = this.STATE_PLAY;
 				break;
 				
 			case this.STATE_PLAY: // play Flappy Bird game by using genetic algorithm AI
-				this.allSurvive = 0;
 				this.BirdGroup.forEachAlive(function(bird){
 					// calculate the current fitness and the score for this bird
 					bird.fitness += Math.abs(bird.targetBarrier.topTree.deltaX)/this.BARRIER_DISTANCE;
@@ -198,11 +195,14 @@ App.Main.prototype = {
 					if(bird.gotCoin){
 						this.BirdGroup.forEachAlive(function(birdShift){
 							if(!birdShift.gotCoin) {
-								birdShift.x = birdShift.x - birdShift.targetBarrier.coinShift;
+								// 75% Chance to be moved backwards when an opponent bird picks up a 
+								if(Math.random() < 0.75) {
+									birdShift.x = birdShift.x - birdShift.targetBarrier.coin.coinShift;
+								}
 							}
 							else{
 								//Optional shift forward for the bird who picked up the coin
-								//birdShift.x = birdShift.x + birdShift.targetBarrier.coinShift;
+								birdShift.x = birdShift.x + birdShift.targetBarrier.coin.coinShift/2;
 								birdShift.gotCoin = false;
 							}
 						});
@@ -219,7 +219,7 @@ App.Main.prototype = {
 
 						// If the bird has made it far enough, kill it
 						if (bird.score >= 50) {
-							this.allSurvive = this.allSurvive + 1;
+							this.allSurvive++;
 							this.onDeath(bird);
 						}
 						
@@ -243,6 +243,14 @@ App.Main.prototype = {
 				this.GA.evolvePopulation();
 				this.GA.iteration++;	
 				this.state = this.STATE_START;
+				if(this.allSurvive == 10) {
+					this.count = 0;
+					this.BirdGroup.forEach(function(bird){
+						console.log("Bird # " + this.count +" fitness: "+ bird.fitness);
+						this.count++;
+						this.allSurvive = 0;
+					});
+				}
 				break;
 		}
 	},
