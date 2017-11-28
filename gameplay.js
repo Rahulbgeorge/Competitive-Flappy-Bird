@@ -248,10 +248,11 @@ App.Main.prototype = {
 				this.GA.iteration++;	
 				this.state = this.STATE_START;
 				if(this.allSurvive == 10) {
+					console.log("Gen " + this.GA.iteration);
 					this.BirdGroup.forEach(function(bird){
 						console.log("Bird # " + bird.index +" fitness: "+ bird.fitness);
-						this.allSurvive = 0;
 					});
+					this.allSurvive = 0;
 				}
 				break;
 		}
@@ -368,7 +369,7 @@ TreeGroup.prototype.checkCollide = function(bird, object) {
 	if(!object.isTree) {
 		if (!this.coin.gotten) {
         	this.coin.onGet();
-        	//bird.fitness++;
+        	bird.fitness++;
    			bird.gotCoin = true;
    			this.coin.triggered = true;
 		}
