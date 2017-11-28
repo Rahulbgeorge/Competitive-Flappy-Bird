@@ -179,8 +179,7 @@ App.Main.prototype = {
 				}, this);
 							
 				this.state = this.STATE_PLAY;
-				break;
-				
+				break;			
 			case this.STATE_PLAY: // play Flappy Bird game by using genetic algorithm AI
 				this.BirdGroup.forEachAlive(function(bird){
 					// calculate the current fitness and the score for this bird
@@ -193,24 +192,28 @@ App.Main.prototype = {
                                                      bird.targetBarrier.checkCollide.bind(bird.targetBarrier),
                                                      this);					
 					if(bird.gotCoin){
-						this.BirdGroup.forEachAlive(function(birdShift){
-							if(!birdShift.gotCoin) {
-								// 75% Chance to be moved backwards when an opponent bird picks up a 
-								if(Math.random() < 0.75) {
-									birdShift.x = birdShift.x - birdShift.targetBarrier.coin.coinShift;
+						//Shfit all birds back by coinShift/2 except for the bird who picked up the coin
+						//Only trigger the coin shifting once, so triggered = false after the first call
+						if(bird.targetBarrier.coin.triggered) {
+							this.BirdGroup.forEachAlive(function(birdShift){
+								if(!birdShift.gotCoin) {
+									birdShift.x = birdShift.x - birdShift.targetBarrier.coin.coinShift/2;
 								}
-							}
-							else{
-								//Optional shift forward for the bird who picked up the coin
-								birdShift.x = birdShift.x + birdShift.targetBarrier.coin.coinShift/2;
-								birdShift.gotCoin = false;
-							}
-						});
+							});
+							bird.targetBarrier.coin.triggered = false;
+						}
 					}
 					if (bird.alive) {
 						// check if the bird passed through the gap of the target barrier
 						if (bird.x > bird.targetBarrier.getGapX()) {
 							bird.score++;
+							//if a bird picked up this barrier's coin, shift him forwards by coinShift
+							//once he reached the barrier gap
+							if(bird.gotCoin) {
+								bird.gotCoin = false;
+								bird.x = bird.x + bird.targetBarrier.coin.coinShift;
+								bird.targetBarrier.coin.gotten = false;
+							}
 							bird.targetBarrier = this.getBarrier(bird.targetBarrier.index + 1);
 						}
 						
@@ -341,7 +344,7 @@ TreeGroup.prototype.constructor = TreeGroup;
 TreeGroup.prototype.restart = function(x) {
 	this.topTree.reset(0, 0);
 	this.bottomTree.reset(0, this.topTree.height + 130);
-    this.coin.reset(this.coinOffset, this.game.rnd.integerInRange(300, 600));
+    this.coin.reset(this.coinOffset, this.game.rnd.integerInRange(350, 650));
     this.coin.resetCustom();
 
 	this.x = x;
@@ -362,15 +365,15 @@ TreeGroup.prototype.getGapY = function() {
 	return this.bottomTree.world.y - 65;
 };
 
-TreeGroup.prototype.checkCollide = function(bird) {
-    // Check if the bird hit the coin
-    if (bird.x < this.topTree.world.x + this.coinOffset + 20) {
-    	if (!this.coin.gotten) {
-            this.coin.onGet();
-            bird.fitness++;
-       		bird.gotCoin = true;
-    	}
-    	return false;
+TreeGroup.prototype.checkCollide = function(bird, object) {
+	if(!object.isTree) {
+		if (!this.coin.gotten) {
+        	this.coin.onGet();
+        	//bird.fitness++;
+   			bird.gotCoin = true;
+   			this.coin.triggered = true;
+		}
+		return false;
     }
     return true;
 };
@@ -385,6 +388,7 @@ var Tree = function(game, frame) {
 	
 	this.body.allowGravity = false;
 	this.body.immovable = true;
+	this.isTree = true;
 };
 
 Tree.prototype = Object.create(Phaser.Sprite.prototype);
@@ -403,6 +407,7 @@ Tree.prototype.constructor = Tree;
     this.body.immovable = true;
 
     this.gotten = false;
+    this.triggered = false;
     this.coinShift = 10;
 };
 
@@ -412,7 +417,7 @@ Tree.prototype.constructor = Tree;
  Coin.prototype.onGet = function(){
     this.gotten = true;
     this.alpha = 0.1;
-    console.log("bird got a coin!");
+    //console.log("bird got a coin!");
  }
 
   Coin.prototype.resetCustom = function(){
@@ -455,7 +460,7 @@ Bird.prototype.restart = function(iteration){
 	this.score = 0;
 	
 	this.alpha = 1;
-	this.reset(150, 300 + this.index * 20);
+	this.reset(400, 300 + this.index * 20);
 };
 
 Bird.prototype.flap = function(){
