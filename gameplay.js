@@ -213,6 +213,7 @@ App.Main.prototype = {
 								bird.gotCoin = false;
 								bird.x = bird.x + bird.targetBarrier.coin.coinShift;
 								bird.targetBarrier.coin.gotten = false;
+								bird.targetBarrier.coin.alpha = 1.0;
 							}
 							bird.targetBarrier = this.getBarrier(bird.targetBarrier.index + 1);
 						}
@@ -247,10 +248,8 @@ App.Main.prototype = {
 				this.GA.iteration++;	
 				this.state = this.STATE_START;
 				if(this.allSurvive == 10) {
-					this.count = 0;
 					this.BirdGroup.forEach(function(bird){
-						console.log("Bird # " + this.count +" fitness: "+ bird.fitness);
-						this.count++;
+						console.log("Bird # " + bird.index +" fitness: "+ bird.fitness);
 						this.allSurvive = 0;
 					});
 				}
