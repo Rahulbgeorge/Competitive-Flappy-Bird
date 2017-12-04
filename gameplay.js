@@ -71,9 +71,6 @@ App.Main.prototype = {
 		for (var i = 0; i < this.GA.max_units; i++){
 			this.BirdGroup.add(new Bird(this.game, 0, 0, i));
 		}		
-		
-		//create a allSurvive counter that determines when all birds have made it to barrier 50
-		this.allSurvive = 0;
 
 		// create a BarrierGroup which contains a number of Tree Groups
 		// (each Tree Group contains a top and bottom Tree object)
@@ -182,6 +179,10 @@ App.Main.prototype = {
 				break;			
 			case this.STATE_PLAY: // play Flappy Bird game by using genetic algorithm AI
 				this.BirdGroup.forEachAlive(function(bird){
+					// End the game when a bird gets to a fitness above 50
+					if (bird.fitness > 20) {
+						this.state = this.STATE_GAMEOVER;
+					}
 					// calculate the current fitness and the score for this bird
 					bird.fitness += Math.abs(bird.targetBarrier.topTree.deltaX)/this.BARRIER_DISTANCE;
 					
@@ -191,31 +192,38 @@ App.Main.prototype = {
                                                      this.onDeath,
                                                      bird.targetBarrier.checkCollide.bind(bird.targetBarrier),
                                                      this);					
-					if(bird.gotCoin){
-						//Shfit all birds back by coinShift/2 except for the bird who picked up the coin
-						//Only trigger the coin shifting once, so triggered = false after the first call
-						if(bird.targetBarrier.coin.triggered) {
-							this.BirdGroup.forEachAlive(function(birdShift){
-								if(!birdShift.gotCoin) {
-									birdShift.x = birdShift.x - birdShift.targetBarrier.coin.coinShift/2;
-								}
-							});
-							bird.targetBarrier.coin.triggered = false;
-						}
+					if (bird.gotCoin) {
+						var first = true;
+						// Shfit all birds back by coinShift/2 except for the bird who picked up the coin
+						this.BirdGroup.forEachAlive(function(otherBird){
+							if (bird != otherBird && otherBird.x >= bird.x) first = false;
+							if(!otherBird.gotCoin) {
+								otherBird.shift = -otherBird.targetBarrier.coin.coinShift/2;
+							}
+						});
+						// Shift this bird forward by coinShift if they aren't first
+						if (!first) bird.shift = bird.targetBarrier.coin.coinShift;
 					}
 					if (bird.alive) {
 						// check if the bird passed through the gap of the target barrier
 						if (bird.x > bird.targetBarrier.getGapX()) {
 							bird.score++;
-							//if a bird picked up this barrier's coin, shift him forwards by coinShift
-							//once he reached the barrier gap
-							if(bird.gotCoin) {
-								bird.gotCoin = false;
-								bird.x = bird.x + bird.targetBarrier.coin.coinShift;
-								bird.targetBarrier.coin.gotten = false;
-								bird.targetBarrier.coin.alpha = 1.0;
+							
+							// If a bird was shifted since the last gap, apply it here
+							if (bird.shift > 0) {
+								bird.x = bird.x + bird.shift;
+								if (bird.gotCoin) {
+									bird.targetBarrier.coin.gotten = false;
+									bird.targetBarrier.coin.alpha = 1.0;
+								}
+								bird.shift = 0;
+							} else if (bird.shift < 0) {
+								bird.shift += bird.x - bird.targetBarrier.getGapX();
+								bird.x = bird.targetBarrier.getGapX() + .001;
+								return;
 							}
-							bird.targetBarrier = this.getBarrier(bird.targetBarrier.index + 1);
+							bird.gotCoin = false;
+ 							bird.targetBarrier = this.getBarrier(bird.targetBarrier.index + 1);
 						}
 						
 						// check if a bird flies out of vertical bounds
@@ -369,9 +377,7 @@ TreeGroup.prototype.checkCollide = function(bird, object) {
 	if(!object.isTree) {
 		if (!this.coin.gotten) {
         	this.coin.onGet();
-        	bird.fitness++;
    			bird.gotCoin = true;
-   			this.coin.triggered = true;
 		}
 		return false;
     }
@@ -407,8 +413,7 @@ Tree.prototype.constructor = Tree;
     this.body.immovable = true;
 
     this.gotten = false;
-    this.triggered = false;
-    this.coinShift = 10;
+    this.coinShift = 20;
 };
 
  Coin.prototype = Object.create(Phaser.Sprite.prototype);
@@ -435,6 +440,9 @@ var Bird = function(game, x, y, index) {
 	this.index = index;
 	this.anchor.setTo(0.5);
 	this.gotCoin = false;
+	// Measures how much the bird should shift
+	// when it hits its next barrier
+	this.shift = 0;
 	  
 	// add flap animation and start to play it
 	var i=index*2;
