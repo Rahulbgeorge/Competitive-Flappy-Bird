@@ -207,8 +207,6 @@ App.Main.prototype = {
 					if (bird.alive) {
 						// check if the bird passed through the gap of the target barrier
 						if (bird.x > bird.targetBarrier.getGapX()) {
-							bird.score++;
-							
 							// If a bird was shifted since the last gap, apply it here
 							if (bird.shift > 0) {
 								bird.x = bird.x + bird.shift;
@@ -224,6 +222,7 @@ App.Main.prototype = {
 							}
 							bird.gotCoin = false;
  							bird.targetBarrier = this.getBarrier(bird.targetBarrier.index + 1);
+ 							bird.score++;
 						}
 						
 						// check if a bird flies out of vertical bounds
