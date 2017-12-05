@@ -183,8 +183,6 @@ App.Main.prototype = {
 					if (bird.fitness > 20) {
 						this.state = this.STATE_GAMEOVER;
 					}
-					// calculate the current fitness and the score for this bird
-					bird.fitness += Math.abs(bird.targetBarrier.topTree.deltaX)/this.BARRIER_DISTANCE;
 					
 					// check collision between a bird and the target barrier
 					this.game.physics.arcade.collide(bird,
@@ -210,6 +208,7 @@ App.Main.prototype = {
 							// If a bird was shifted since the last gap, apply it here
 							if (bird.shift > 0) {
 								bird.x = bird.x + bird.shift;
+								bird.fitness += bird.shift/this.BARRIER_DISTANCE;
 								if (bird.gotCoin) {
 									bird.targetBarrier.coin.gotten = false;
 									bird.targetBarrier.coin.alpha = 1.0;
@@ -236,6 +235,9 @@ App.Main.prototype = {
 						
 						// perform a proper action (flap yes/no) for this bird by activating its neural network
 						this.GA.activateBrain(bird);
+
+						// calculate the current fitness and the score for this bird
+						bird.fitness += Math.abs(bird.targetBarrier.topTree.deltaX)/this.BARRIER_DISTANCE;
 					}
 				}, this);
 				
