@@ -180,7 +180,7 @@ App.Main.prototype = {
 			case this.STATE_PLAY: // play Flappy Bird game by using genetic algorithm AI
 				this.BirdGroup.forEachAlive(function(bird){
 					// End the game when a bird gets to a fitness above 50
-					if (bird.fitness > 20) {
+					if (bird.fitness > 50) {
 						this.state = this.STATE_GAMEOVER;
 					}
 					
@@ -225,7 +225,7 @@ App.Main.prototype = {
 						}
 						
 						// check if a bird flies out of vertical bounds
-						if (bird.y<0 || bird.y>610) this.onDeath(bird);
+						if (bird.y<0 || bird.y>610 || bird.x<0) this.onDeath(bird);
 
 						// If the bird has made it far enough, kill it
 						if (bird.score >= 50) {
